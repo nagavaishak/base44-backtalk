@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 152 73% 17%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 60 6% 95%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 60 6% 95%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 152 73% 17%;
+    --radius: 1.25rem;
+    --font-heading: "Newsreader", ui-serif, Georgia, serif;
+    --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Newsreader", ui-serif, Georgia, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    font-feature-settings: "ss01", "cv01";
+  }
+
+  .font-heading, .font-display {
+    font-family: var(--font-heading);
+    font-optical-sizing: auto;
+  }
+}
+
+@layer utilities {
+  .bt-ink { color: #0A0A0A; }
+  .bt-cream { background-color: #F4F4EF; }
+  .bt-cream-text { color: #F4F4EF; }
+  .bt-green { color: #0E4B32; }
+  .bt-bg-green { background-color: #0E4B32; }
+  .bt-disabled { background-color: #D9DAD4; }
+  .bt-hairline { border: 1px solid rgba(10,10,10,0.08); }
+  .bt-hairline-strong { border: 1px solid rgba(10,10,10,0.12); }
+  .bt-pos { color: #0E8A4B; }
+  .bt-bg-pos { background-color: #0E8A4B; }
+  .bt-neg { color: #D14343; }
+  .bt-bg-neg { background-color: #D14343; }
+  .bt-fill-pos { fill: #0E8A4B; }
+  .bt-fill-neg { fill: #D14343; }
+  .bt-track-tight { letter-spacing: -0.02em; }
+  .bt-track-tighter { letter-spacing: -0.035em; }
+  .bt-slide { transition: transform 240ms ease-out, margin 240ms ease-out, opacity 240ms ease-out; }
+  .bt-fade { transition: opacity 240ms ease-out; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* thin scrollbar for the app */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(10,10,10,0.12); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
