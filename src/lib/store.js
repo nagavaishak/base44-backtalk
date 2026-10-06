@@ -221,14 +221,14 @@ function buildChartData(seed) {
 }
 
 // build a take from belief + answers
-export function buildTake(belief, answers) {
+export function buildTake(belief, answers, options = {}) {
   const id = uid();
   const seed = id + belief;
-  const title = makeTitle(belief, answers);
+  const cfg = beliefConfig(belief);
+  const title = cfg.title;
   const summary = makeSummary(belief, title, answers);
   const positions = makePositions(belief, answers);
   const chart = buildChartData(seed);
-  // overall return based on 1Y window last point
   const ret1y = chart["1Y"].values[chart["1Y"].values.length - 1];
   const bench1y = chart["1Y"].benchmark[chart["1Y"].benchmark.length - 1];
   const beat = Number((ret1y - bench1y).toFixed(2));
@@ -236,14 +236,17 @@ export function buildTake(belief, answers) {
   const todaySign = seeded(seed + "sign")() > 0.4 ? 1 : -1;
   const todayChange = Number((today * todaySign).toFixed(2));
   const onTrack = ret1y >= 0;
+  const horizon = lastAnswer(answers, "q2").toLowerCase();
+  const defaultPeriod = horizon.includes("week") ? "1M" : horizon.includes("month") ? "3M" : "1Y";
+  const funded = options.funded !== false;
   return {
     id,
     title,
     belief,
     summary,
     positions,
-    value: 100,
-    todayChange,
+    value: funded ? 100 : 0,
+    todayChange: funded ? todayChange : 0,
     return1y: ret1y,
     beat,
     onTrack,
@@ -251,22 +254,31 @@ export function buildTake(belief, answers) {
       ? "Holding steady within your guardrails."
       : "A little choppy lately, but still inside your guardrails.",
     chart,
+    defaultPeriod,
+    funded,
+    rules: strategyRules(belief, answers),
     createdDate: Date.now(),
-    activity: defaultActivity(title),
+    activity: defaultActivity(title, funded),
     public: true,
   };
 }
 
-function defaultActivity(title) {
+function defaultActivity(title, funded) {
   const now = new Date();
   const t = (mins) => {
     const d = new Date(now.getTime() - mins * 60000);
     return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   };
+  if (funded) {
+    return [
+      { time: t(2), label: `Autopilot ON: trades within your guardrails without asking` },
+      { time: t(6), label: `Activated with $100.00 Practice money` },
+      { time: t(9), label: `Created '${title}'` },
+    ];
+  }
   return [
-    { time: t(2), label: `Autopilot ON: trades within your guardrails without asking` },
-    { time: t(6), label: `Activated with $100.00 Practice money` },
-    { time: t(9), label: `Created '${title}' Practice money` },
+    { time: t(2), label: `Saved as an unfunded draft` },
+    { time: t(6), label: `Created '${title}'` },
   ];
 }
 
@@ -286,65 +298,183 @@ function makeTitle(belief, answers) {
 }
 
 function makeSummary(belief, title, answers) {
-  return `This take puts ${title} into a simple basket of stocks and ETFs and tracks it in Practice money. It buys at the start of the window and holds through to today, so you can see how the idea played out without risking a cent.`;
+  return `This take puts ${title} into a sample basket of stocks and ETFs and tracks it in Practice money. It buys at the start of the window and holds through to today, using sample prices — so you can see how the idea might play out without risking a cent.`;
 }
 
 function makePositions(belief, answers) {
-  const b = belief.toLowerCase();
-  let pool;
-  if (b.includes("glp") || b.includes("food") || b.includes("health"))
-    pool = ["LLY", "NVO", "UNH", "JNJ", "PFE", "KO", "PEP", "MCD", "WMT", "COST", "XLV", "SPY", "QQQ", "VOO"];
-  else if (b.includes("dollar") || b.includes("real asset"))
-    pool = ["GLD", "XLE", "XOM", "CCJ", "URA", "TLT", "VTI", "VOO", "COST", "WMT", "JPM", "SPY", "QQQ", "GLD"];
-  else if (b.includes("nuclear"))
-    pool = ["CCJ", "URA", "XLE", "EXM", "JPM", "SPY", "QQQ", "VOO", "BAC", "GS", "TLT", "VTI", "XLF", "CCJ"];
-  else if (b.includes("stablecoin") || b.includes("payment"))
-    pool = ["COIN", "HOOD", "JPM", "V", "MA", "BAC", "SQ", "SPY", "QQQ", "VTI", "WMT", "COST", "GS", "COIN"];
-  else if (b.includes("ai"))
-    pool = ["NVDA", "AMD", "AVGO", "MSFT", "GOOGL", "META", "PLTR", "ORCL", "CRM", "SPY", "QQQ", "INTC", "TSM", "AVGO"];
-  else
-    pool = ["AAPL", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "SPY", "QQQ", "VOO", "JPM", "V", "COST", "GLD", "JNJ"];
-  // dedupe + 14
+  const cfg = beliefConfig(belief);
+  const layer = pickLayer(cfg, answers);
+  const tickers = dedupe([...layer.tickers, ...cfg.conviction, ...cfg.hedge]);
+  return tickers.map((ticker) => ({ ticker, weight: Number((100 / tickers.length).toFixed(1)) }));
+}
+
+// ---------- belief configs (sample) ----------
+export function beliefConfig(belief) {
+  const b = (belief || "").toLowerCase();
+  const dropped = [
+    { ticker: "TSLA", reason: "Too crowded — momentum already priced in." },
+    { ticker: "PLTR", reason: "Dilution risk; still too early to size." },
+    { ticker: "DKNG", reason: "Regulatory overhang, speculative for this basket." },
+  ];
+  const rules = [
+    "Trim any pick past 25%.",
+    "Keep cash on hand for rebalances.",
+    "Rebalance quarterly.",
+  ];
+  const configs = [
+    {
+      test: (x) => x.includes("nuclear"),
+      title: "Nuclear Baseload",
+      layers: [
+        { label: "Uranium miners", tickers: ["CCJ", "URA"] },
+        { label: "Energy producers", tickers: ["XLE", "XOM"] },
+        { label: "Broad market", tickers: ["VTI", "SPY"] },
+        { label: "Project financiers", tickers: ["JPM", "GS"] },
+        { label: "Regional banks", tickers: ["BAC", "WFC"] },
+        { label: "Bond hedge", tickers: ["TLT", "SHY"] },
+      ],
+      conviction: ["JPM", "GS", "BAC"],
+      hedge: ["TLT", "VTI"],
+    },
+    {
+      test: (x) => x.includes("glp") || x.includes("food") || x.includes("health"),
+      title: "GLP-1 Full Stack",
+      layers: [
+        { label: "Drug makers", tickers: ["LLY", "NVO"] },
+        { label: "Healthcare ETFs", tickers: ["XLV", "VTI"] },
+        { label: "Food & beverage", tickers: ["KO", "PEP"] },
+        { label: "Providers", tickers: ["UNH", "JNJ"] },
+        { label: "Consumer staples", tickers: ["WMT", "COST"] },
+        { label: "Broad market", tickers: ["SPY", "QQQ"] },
+      ],
+      conviction: ["UNH", "JNJ", "KO"],
+      hedge: ["SPY", "VOO"],
+    },
+    {
+      test: (x) => x.includes("dollar") || x.includes("real asset"),
+      title: "Real Assets Basket",
+      layers: [
+        { label: "Gold & metals", tickers: ["GLD", "XLE"] },
+        { label: "Energy", tickers: ["XOM", "XLE"] },
+        { label: "Uranium", tickers: ["CCJ", "URA"] },
+        { label: "Long bonds", tickers: ["TLT", "SHY"] },
+        { label: "Broad market", tickers: ["VTI", "VOO"] },
+        { label: "Consumer staples", tickers: ["COST", "WMT"] },
+      ],
+      conviction: ["CCJ", "URA", "TLT"],
+      hedge: ["VTI", "VOO"],
+    },
+    {
+      test: (x) => x.includes("stablecoin") || x.includes("payment"),
+      title: "Stablecoin Full Stack",
+      layers: [
+        { label: "Crypto exchanges", tickers: ["COIN", "HOOD"] },
+        { label: "Card networks", tickers: ["V", "MA"] },
+        { label: "Banks", tickers: ["JPM", "BAC"] },
+        { label: "Payments fintech", tickers: ["SQ", "HOOD"] },
+        { label: "Broad market", tickers: ["SPY", "QQQ"] },
+        { label: "Consumer", tickers: ["WMT", "COST"] },
+      ],
+      conviction: ["V", "MA", "SQ"],
+      hedge: ["SPY", "QQQ"],
+    },
+    {
+      test: (x) => x.includes("ai") || x.includes("inference"),
+      title: "AI Inference Edge",
+      layers: [
+        { label: "Chip makers", tickers: ["NVDA", "AMD"] },
+        { label: "Silicon", tickers: ["AVGO", "TSM"] },
+        { label: "Hyperscalers", tickers: ["MSFT", "GOOGL"] },
+        { label: "Software", tickers: ["ORCL", "CRM"] },
+        { label: "Broad tech", tickers: ["QQQ", "SPY"] },
+        { label: "Legacy chips", tickers: ["INTC", "META"] },
+      ],
+      conviction: ["MSFT", "GOOGL", "META"],
+      hedge: ["SPY", "QQQ"],
+    },
+    {
+      test: (x) => x.includes("housing"),
+      title: "Housing Shortage",
+      layers: [
+        { label: "Home improvement", tickers: ["HD", "COST"] },
+        { label: "Retail", tickers: ["WMT", "COST"] },
+        { label: "Broad market", tickers: ["VTI", "SPY"] },
+        { label: "Consumer", tickers: ["NKE", "SBUX"] },
+        { label: "Bonds", tickers: ["TLT", "SHY"] },
+        { label: "Banks", tickers: ["JPM", "BAC"] },
+      ],
+      conviction: ["JPM", "BAC", "WMT"],
+      hedge: ["VTI", "SPY"],
+    },
+    {
+      test: (x) => x.includes("defense"),
+      title: "Defense Decade",
+      layers: [
+        { label: "Aerospace", tickers: ["BA", "XOM"] },
+        { label: "Industrials", tickers: ["XOM", "HD"] },
+        { label: "Banks", tickers: ["JPM", "GS"] },
+        { label: "Broad market", tickers: ["VTI", "SPY"] },
+        { label: "Bonds", tickers: ["TLT", "SHY"] },
+        { label: "Energy", tickers: ["XLE", "XOM"] },
+      ],
+      conviction: ["JPM", "GS", "BAC"],
+      hedge: ["VTI", "SPY"],
+    },
+  ];
+  const found = configs.find((c) => c.test(b));
+  if (found) return { ...found, dropped, rules };
+  const title =
+    belief && belief.trim() && !b.includes("interview") ? makeTitle(belief, {}) : "Your First Take";
+  return {
+    title,
+    layers: [
+      { label: "Tech leaders", tickers: ["AAPL", "MSFT"] },
+      { label: "Mega cap", tickers: ["GOOGL", "AMZN"] },
+      { label: "Broad market", tickers: ["SPY", "QQQ"] },
+      { label: "AI & chips", tickers: ["NVDA", "AMD"] },
+      { label: "Financials", tickers: ["JPM", "V"] },
+      { label: "Bonds & gold", tickers: ["GLD", "TLT"] },
+    ],
+    conviction: ["NVDA", "AMZN", "META"],
+    hedge: ["SPY", "QQQ"],
+    dropped,
+    rules,
+  };
+}
+
+function lastAnswer(answers, id) {
+  const arr = answers && answers[id];
+  return arr && arr.length ? arr[arr.length - 1] : "";
+}
+function pickLayer(cfg, answers) {
+  const chosen = lastAnswer(answers, "q3");
+  return cfg.layers.find((l) => l.label === chosen) || cfg.layers[0];
+}
+function dedupe(list) {
   const seen = new Set();
   const out = [];
-  for (const t of pool) {
+  for (const t of list) {
     if (!seen.has(t)) {
       seen.add(t);
       out.push(t);
     }
-    if (out.length === 14) break;
   }
-  while (out.length < 14) out.push(pool[out.length % pool.length]);
-  return out.slice(0, 14).map((ticker) => ({ ticker, weight: Number((100 / 14).toFixed(1)) }));
+  return out;
 }
 
 // ---------- interview questions ----------
 // returns array of 3 questions; each has id, text, options (3 chips), and an altText for "different angle"
 export function buildInterview(belief) {
-  const b = (belief || "").toLowerCase();
+  const cfg = beliefConfig(belief);
+  const beliefShort = shorten(belief);
   const riskOpts = ["Keep it steady", "A bit of swing", "High conviction"];
   const riskAlt = "How much bounce can you stomach before you'd want to step away?";
   const horizonOpts = ["A few weeks", "A few months", "Years"];
   const horizonAlt = "When would you first check whether this idea is working?";
-
-  // Q3 ticker suggestions based on belief
-  let tickerPool;
-  if (b.includes("glp") || b.includes("food") || b.includes("health"))
-    tickerPool = ["LLY", "NVO", "UNH", "JNJ", "PFE", "KO", "PEP", "MCD", "WMT", "COST", "XLV", "VOO"];
-  else if (b.includes("dollar") || b.includes("real asset"))
-    tickerPool = ["GLD", "XLE", "XOM", "CCJ", "URA", "TLT", "VTI", "VOO", "COST", "JPM", "SPY", "QQQ"];
-  else if (b.includes("nuclear"))
-    tickerPool = ["CCJ", "URA", "XLE", "JPM", "SPY", "QQQ", "VOO", "BAC", "GS", "TLT", "VTI", "XLF"];
-  else if (b.includes("stablecoin") || b.includes("payment"))
-    tickerPool = ["COIN", "HOOD", "JPM", "V", "MA", "BAC", "SQ", "SPY", "QQQ", "VTI", "WMT", "COST"];
-  else if (b.includes("ai"))
-    tickerPool = ["NVDA", "AMD", "AVGO", "MSFT", "GOOGL", "META", "PLTR", "ORCL", "CRM", "QQQ", "INTC", "TSM"];
-  else tickerPool = ["AAPL", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "SPY", "QQQ", "VOO", "JPM", "V", "COST"];
-
   return [
     {
       id: "q1",
-      text: `First — how much risk feels right for "${shorten(belief)}"?`,
+      text: `First — how much risk feels right for "${beliefShort}"?`,
       options: riskOpts,
       alt: riskAlt,
     },
@@ -356,11 +486,11 @@ export function buildInterview(belief) {
     },
     {
       id: "q3",
-      text: "Want to lean on any of these while we build it?",
-      options: tickerPool.slice(0, 3),
-      alt: "Show me a different set",
-      tickerPool,
-      isTicker: true,
+      text: "Which layer do you want to own?",
+      options: cfg.layers.slice(0, 3).map((l) => l.label),
+      alt: "Which layer do you want to own?",
+      setPool: cfg.layers.map((l) => l.label),
+      isSet: true,
     },
   ];
 }
@@ -369,6 +499,48 @@ function shorten(s) {
   if (!s) return "your idea";
   if (s.length <= 48) return s;
   return s.slice(0, 45) + "…";
+}
+
+// ---------- build screen strategy (sample) ----------
+export function buildStrategy(belief, answers = {}) {
+  const cfg = beliefConfig(belief);
+  const layer = pickLayer(cfg, answers);
+  const risk = lastAnswer(answers, "q1").toLowerCase();
+  const cashW = risk.includes("steady") ? 10 : risk.includes("conviction") ? 2 : 5;
+  const convW = 30;
+  const hedgeW = 15;
+  const coreW = 100 - convW - hedgeW - cashW;
+  const selected = dedupe([...layer.tickers, ...cfg.conviction, ...cfg.hedge]);
+  const buckets = [
+    { name: layer.label, weight: coreW, items: layer.tickers },
+    { name: "Conviction", weight: convW, items: cfg.conviction },
+    { name: "Hedge", weight: hedgeW, items: cfg.hedge },
+  ];
+  return {
+    title: cfg.title,
+    checked: 16,
+    selected,
+    dropped: cfg.dropped,
+    buckets,
+    cash: cashW,
+    rules: cfg.rules,
+  };
+}
+
+export function strategyRules(belief, answers = {}) {
+  const risk = lastAnswer(answers, "q1").toLowerCase();
+  const horizon = lastAnswer(answers, "q2").toLowerCase();
+  const exitThreshold = risk.includes("steady") ? 15 : risk.includes("conviction") ? 35 : 25;
+  const cadence = horizon.includes("week")
+    ? "monthly"
+    : horizon.includes("month")
+    ? "quarterly"
+    : "annually";
+  return {
+    entry: "Buy the basket at the next market open, spread evenly across the selected names.",
+    exit: `Trim any name that falls ${exitThreshold}% below its entry price, or if the belief breaks — we'll flag it.`,
+    rebalance: `Rebalance back to target weights ${cadence}, or when any name drifts past ${exitThreshold}%.`,
+  };
 }
 
 // leaderboard: public takes, ranked by return

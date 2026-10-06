@@ -15,6 +15,11 @@ import Takes from '@/pages/Takes';
 import Leaderboard from '@/pages/Leaderboard';
 import Settings from '@/pages/Settings';
 import Empty from '@/pages/Empty';
+import SignIn from '@/pages/SignIn';
+import ForkTake from '@/pages/ForkTake';
+import DraftTake from '@/pages/DraftTake';
+import Drafts from '@/pages/Drafts';
+import Active from '@/pages/Active';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -43,15 +48,19 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
+      <Route path="/login" element={<SignIn />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/takes/new" element={<NewTake />} />
         <Route path="/interview" element={<Interview />} />
+        <Route path="/takes/:id/draft" element={<DraftTake />} />
         <Route path="/takes/:id" element={<TakeDetail />} />
+        <Route path="/takes/:id/fork" element={<ForkTake />} />
         <Route path="/takes" element={<Takes />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/drafts" element={<Empty title="Drafts" note="Drafts you start will show up here." />} />
+        <Route path="/active" element={<Active />} />
+        <Route path="/drafts" element={<Drafts />} />
         <Route path="/chats" element={<Empty title="Chats" note="Your conversations about a take will live here." />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

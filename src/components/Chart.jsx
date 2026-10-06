@@ -3,7 +3,7 @@ import { PERIOD_KEYS } from "@/lib/store";
 
 const Y_TICKS = [14, 12, 7, 2, -3];
 
-export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket }) {
+export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, showEntry }) {
   const data = take.chart[period];
   const values = data.values;
   const benchmark = data.benchmark;
@@ -137,13 +137,47 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket }) 
             </g>
           )}
 
+          {/* entry point marker */}
+          {showEntry && (
+            <g>
+              <line
+                x1={xToPx(values.length - 1)}
+                y1={padT}
+                x2={xToPx(values.length - 1)}
+                y2={padT + plotH}
+                stroke={lineColor}
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                opacity={0.45}
+              />
+              <circle
+                cx={xToPx(values.length - 1)}
+                cy={yToPx(values[values.length - 1])}
+                r={4}
+                fill={lineColor}
+                stroke="#fff"
+                strokeWidth={1.5}
+              />
+              <text
+                x={Math.max(xToPx(values.length - 1) - 6, padL + 14)}
+                y={yToPx(values[values.length - 1]) - 9}
+                textAnchor="end"
+                fontSize={10}
+                fontWeight={600}
+                fill={lineColor}
+              >
+                Entry
+              </text>
+            </g>
+          )}
+
           {/* x labels (sparse) */}
           {labels.map((d, i) => {
             const step = Math.ceil(labels.length / 5);
             if (i % step !== 0 && i !== labels.length - 1) return null;
             return (
               <text key={i} x={xToPx(i)} y={h - 6} textAnchor="middle" fontSize={10} fill="rgba(10,10,10,0.4)">
-                {d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </text>
             );
           })}
@@ -159,7 +193,7 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket }) 
             }}
           >
             <div className="opacity-60">
-              {labels[hover.i].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {new Date(labels[hover.i]).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </div>
             <div className="font-semibold">{fmtPct(values[hover.i])}</div>
           </div>

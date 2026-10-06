@@ -5,7 +5,7 @@ import { getTakes } from "@/lib/store";
 
 export default function Takes() {
   const navigate = useNavigate();
-  const takes = getTakes();
+  const takes = getTakes().filter((t) => t.funded !== false);
 
   return (
     <div className="max-w-[640px]">

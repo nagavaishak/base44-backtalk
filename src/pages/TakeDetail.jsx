@@ -1,20 +1,22 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowUp, Copy, Edit, RefreshCw, Trash2, Settings as SettingsIcon, Layers, Newspaper, Lightbulb, Link2 } from "lucide-react";
+import { ArrowUp, Copy, Edit, RefreshCw, Trash2, Settings as SettingsIcon, Layers, Newspaper, Lightbulb, Link2, GitFork } from "lucide-react";
 import Chart from "@/components/Chart";
 import Mascot from "@/components/Mascot";
+import InvestDialog from "@/components/InvestDialog";
 import { getTake, deleteTakeById, duplicateTake, upsertTake, getProfile } from "@/lib/store";
 
 export default function TakeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [take, setTake] = useState(() => getTake(id));
-  const [period, setPeriod] = useState("1Y");
+  const [period, setPeriod] = useState(take?.defaultPeriod || "1Y");
   const [vsMarket, setVsMarket] = useState(false);
   const [tab, setTab] = useState("feed"); // feed | idea | news
   const [comingSoon, setComingSoon] = useState(false);
   const [ask, setAsk] = useState("");
   const [copied, setCopied] = useState(false);
+  const [investOpen, setInvestOpen] = useState(false);
   const profile = getProfile();
 
   if (!take) {
@@ -35,6 +37,17 @@ export default function TakeDetail() {
   const onMakeReal = () => {
     setComingSoon(true);
     setTimeout(() => setComingSoon(false), 2200);
+  };
+
+  const fundTake = () => {
+    if (take.funded) {
+      setInvestOpen(false);
+      return;
+    }
+    const updated = { ...take, funded: true, value: 100 };
+    upsertTake(updated);
+    setTake(updated);
+    setInvestOpen(false);
   };
 
   const onDelete = () => {
@@ -60,13 +73,33 @@ export default function TakeDetail() {
     <div className="max-w-[640px] pb-28">
       {/* header row */}
       <div className="flex items-center justify-between mb-5">
-        <span className="text-[12px] bt-ink/45">Practice</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] bt-ink/45">Practice</span>
+          {!take.funded && (
+            <span className="px-2 h-6 inline-flex items-center rounded-full bt-cream bg-[#F4F4EF] text-[11px] bt-ink/60">
+              Draft
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={onMakeReal}
+            onClick={() => setInvestOpen(true)}
             className="px-3.5 h-8 rounded-full bt-bg-green text-white text-[13px] font-medium hover:brightness-110 transition"
           >
+            Invest
+          </button>
+          <button
+            onClick={onMakeReal}
+            className="px-3.5 h-8 rounded-full bt-hairline text-[13px] bt-ink/70 hover:bg-black/[0.03] transition"
+          >
             Make it real
+          </button>
+          <button
+            onClick={() => navigate(`/takes/${take.id}/fork`)}
+            className="flex items-center justify-center w-8 h-8 rounded-full bt-hairline hover:bg-black/[0.03] transition"
+            aria-label="Fork"
+          >
+            <GitFork size={15} />
           </button>
           <button
             onClick={() => navigate("/settings")}
@@ -99,6 +132,12 @@ export default function TakeDetail() {
           {fmtPct(take.todayChange)} today
         </span>
       </div>
+      {take.funded && take.pnl != null && (
+        <div className={`mt-1.5 text-[13px] font-medium ${take.pnl >= 0 ? "bt-pos" : "bt-neg"}`}>
+          {take.pnl >= 0 ? "+" : "-"}${Math.abs(take.pnl).toFixed(2)} P&L
+          {take.investedAmount ? ` · invested $${take.investedAmount}` : ""}
+        </div>
+      )}
 
       <div className="mt-3 flex items-center gap-2">
         <span className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-full bt-bg-pos text-white text-[12px] font-medium">
@@ -116,12 +155,31 @@ export default function TakeDetail() {
           onPeriod={setPeriod}
           vsMarket={vsMarket}
           onVsMarket={() => setVsMarket((v) => !v)}
+          showEntry={take.funded}
         />
       </div>
 
       <p className="mt-3 text-[11.5px] bt-ink/35 leading-relaxed">
-        Simulates buying this basket at the start of this window and holding through to today, using historical prices and the current target weights. Past performance is not a predictor of future results.
+        Simulates buying this basket at the start of the window and holding to today, using sample prices and the target weights. This is a demo — not a predictor of future results.
       </p>
+
+      {take.rules && (
+        <div className="mt-5 p-5 rounded-[20px] bt-hairline bg-white">
+          <div className="text-[12px] bt-ink/45 mb-3">Strategy rules</div>
+          <div className="flex flex-col gap-3.5">
+            {[
+              { k: "Entry", v: take.rules.entry },
+              { k: "Exit", v: take.rules.exit },
+              { k: "Rebalance", v: take.rules.rebalance },
+            ].map((r) => (
+              <div key={r.k}>
+                <div className="text-[13px] font-medium bt-ink">{r.k}</div>
+                <div className="text-[13px] bt-ink/60 leading-relaxed mt-0.5">{r.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* pills */}
       <div className="mt-5 flex flex-wrap gap-2">
@@ -193,6 +251,7 @@ export default function TakeDetail() {
           </button>
         </div>
       </div>
+      <InvestDialog open={investOpen} title={take.title} onConfirm={fundTake} onClose={() => setInvestOpen(false)} />
     </div>
   );
 }

@@ -82,7 +82,7 @@ export default function NewTake() {
         </div>
       )}
 
-      <p className="mt-8 text-[12px] bt-ink/35">Starts in practice mode, real prices, zero risk.</p>
+      <p className="mt-8 text-[12px] bt-ink/35">Starts in practice mode, sample prices, zero risk.</p>
     </div>
   );
 }

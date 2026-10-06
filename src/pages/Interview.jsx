@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowUp, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import Mascot from "@/components/Mascot";
-import { buildInterview, buildTake, upsertTake, TICKERS } from "@/lib/store";
+import { buildInterview, buildTake, upsertTake } from "@/lib/store";
 
 function useStream(text, done, speed = 22) {
   const [out, setOut] = useState("");
@@ -33,75 +33,95 @@ export default function Interview() {
   const belief = location.state?.belief || "I don't have an idea, interview me";
 
   const questions = useRef(buildInterview(belief)).current;
-  const [step, setStep] = useState(0); // 0..2 questions, 3 = build offer
-  const [angle, setAngle] = useState(0); // different angle counter per question
+  const [step, setStep] = useState(0); // 0..2 questions, 3 = build card
+  const [angle, setAngle] = useState(0);
   const [answers, setAnswers] = useState({});
   const [thinking, setThinking] = useState(true);
-  const [tickerOffset, setTickerOffset] = useState(0);
+  const [setOffset, setSetOffset] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [builtTake, setBuiltTake] = useState(null);
 
   const q = questions[Math.min(step, 2)];
   const qText = angle % 2 === 0 ? q.text : q.alt;
-
   const [streamed, streaming] = useStream(qText, () => setThinking(false));
 
-  // when question changes, show thinking briefly then stream
   useEffect(() => {
     setThinking(true);
     setAngle(0);
-    if (q.isTicker) setTickerOffset(0);
+    if (q.isSet) setSetOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  const finish = (finalAnswers) => {
+    const t = buildTake(belief, finalAnswers, { funded: false });
+    upsertTake(t);
+    setBuiltTake(t);
+    setStep(3);
+  };
+
   const choose = (val) => {
-    setAnswers((a) => ({ ...a, [q.id]: [...(a[q.id] || []), val] }));
+    const next = { ...answers, [q.id]: [...(answers[q.id] || []), val] };
+    setAnswers(next);
     if (step < 2) setStep((s) => s + 1);
-    else setStep(3);
+    else finish(next);
   };
 
   const differentAngle = () => {
-    if (q.isTicker) {
-      setTickerOffset((o) => o + 3);
+    if (q.isSet) {
+      setSetOffset((o) => (o + 3) % q.setPool.length);
     } else {
       setAngle((a) => a + 1);
       setThinking(true);
     }
   };
 
-  const build = () => {
-    const take = buildTake(belief, answers);
-    upsertTake(take);
-    navigate(`/takes/${take.id}`, { replace: true });
-  };
+  const skipToBuild = () => finish(answers);
 
-  const skipToBuild = () => setStep(3);
-
-  // ticker options for Q3
-  const tickerOptions = q.isTicker
-    ? q.tickerPool.slice(tickerOffset % q.tickerPool.length).concat(q.tickerPool.slice(0, tickerOffset % q.tickerPool.length)).slice(0, 3)
+  const setOptions = q.isSet
+    ? q.setPool
+        .slice(setOffset % q.setPool.length)
+        .concat(q.setPool.slice(0, setOffset % q.setPool.length))
+        .slice(0, 3)
     : q.options;
 
-  if (step === 3) {
+  if (step === 3 && builtTake) {
+    const t = builtTake;
+    const sample = t.positions.slice(0, 5);
     return (
-      <div className="max-w-[520px]">
-        <div className="flex items-center gap-2 mb-4">
-          <Mascot size={22} />
-          <span className="text-[13px] bt-ink/55">I've got enough to build your take.</span>
+      <div className="max-w-[560px]">
+        <div className="flex items-center gap-2.5 mb-5">
+          <Mascot size={26} />
+          <span className="text-[12px] bt-ink/45">built your take</span>
         </div>
-        <h2 className="font-heading text-[30px] leading-tight bt-track-tighter bt-ink">Ready to build it?</h2>
-        <p className="mt-3 text-[15px] bt-ink/55 leading-relaxed">
-          I'll put together a basket of stocks and ETFs that fits your belief, fund it with $100 of Practice money, and start tracking it.
+        <p className="font-heading text-[24px] sm:text-[28px] leading-[1.15] bt-track-tight bt-ink mb-4">
+          Here's a take built from your answers.
         </p>
-        <button
-          onClick={build}
-          className="mt-6 px-5 h-11 rounded-full bt-bg-green text-white text-[15px] font-medium hover:brightness-110 transition"
-        >
-          Build my take
-        </button>
-        <button
-          onClick={() => setStep(2)}
-          className="mt-3 block text-[13px] bt-ink/45 hover:bt-ink transition"
-        >
-          back to the last question
-        </button>
+
+        <div className="p-5 rounded-[20px] bt-hairline bg-white">
+          <span className="px-2 h-6 inline-flex items-center rounded-full bt-cream bg-[#F4F4EF] text-[11px] bt-ink/60">
+            Practice mode
+          </span>
+          <p className="mt-3 text-[14.5px] bt-ink/75 leading-relaxed">"{t.belief}"</p>
+          <div className="mt-4">
+            <div className="text-[12px] bt-ink/45 mb-2">Example positions</div>
+            <div className="flex flex-wrap gap-1.5">
+              {sample.map((p) => (
+                <span
+                  key={p.ticker}
+                  className="px-2.5 h-7 inline-flex items-center rounded-full bt-cream bg-[#F4F4EF] text-[12.5px] bt-ink/80"
+                >
+                  {p.ticker}
+                </span>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/takes/${t.id}/draft`)}
+            className="mt-5 w-full h-11 rounded-full bt-bg-green text-white text-[15px] font-medium hover:brightness-110 transition"
+          >
+            Review this take
+          </button>
+        </div>
       </div>
     );
   }
@@ -118,27 +138,22 @@ export default function Interview() {
       <div className="min-h-[64px]">
         <p className="font-heading text-[26px] sm:text-[30px] leading-[1.15] bt-track-tight bt-ink">
           {streamed}
-          {streaming && <span className="inline-block w-[2px] h-[22px] align-[-2px] ml-0.5 bg-[#0A0A0A]/30 animate-pulse" />}
+          {streaming && (
+            <span className="inline-block w-[2px] h-[22px] align-[-2px] ml-0.5 bg-[#0A0A0A]/30 animate-pulse" />
+          )}
         </p>
       </div>
 
       {!thinking && (
         <div className="mt-7 bt-fade">
           <div className="flex flex-wrap gap-2">
-            {tickerOptions.map((opt) => (
+            {setOptions.map((opt) => (
               <button
                 key={opt}
                 onClick={() => choose(opt)}
                 className="px-3.5 h-10 rounded-full bt-cream bg-[#F4F4EF] text-[14px] bt-ink/80 hover:brightness-[0.985] transition"
               >
-                {q.isTicker ? (
-                  <span>
-                    <span className="font-semibold">{opt}</span>
-                    <span className="bt-ink/40 ml-1.5">{TICKERS.find((t) => t.ticker === opt)?.name || ""}</span>
-                  </span>
-                ) : (
-                  opt
-                )}
+                {opt}
               </button>
             ))}
           </div>
@@ -148,12 +163,27 @@ export default function Interview() {
             className="mt-4 flex items-center gap-1.5 text-[13px] bt-ink/45 hover:bt-ink transition"
           >
             <RotateCw size={13} />
-            {q.isTicker ? "show a different set" : "different angle"}
+            {q.isSet ? "show a different set" : "different angle"}
           </button>
+
+          <div className="mt-5 flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-full bt-hairline bg-white">
+            <input
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && typed.trim()) {
+                  choose(typed.trim());
+                  setTyped("");
+                }
+              }}
+              placeholder={q.isSet ? "Or type your own layer…" : "Or type your own answer…"}
+              className="flex-1 bg-transparent outline-none text-[14px] bt-ink placeholder:text-[#0A0A0A]/35 py-2"
+            />
+          </div>
 
           <button
             onClick={skipToBuild}
-            className="mt-5 block text-[13px] bt-ink/45 hover:bt-ink underline-offset-2 hover:underline transition"
+            className="mt-2.5 block text-[12.5px] bt-ink/40 hover:bt-ink transition"
           >
             I have a thesis — skip to the build
           </button>

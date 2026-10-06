@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Plus, FileText, MessageSquare, Home as HomeIcon, LineChart, Trophy, Settings as SettingsIcon,
+  Plus, FileText, MessageSquare, Home as HomeIcon, LineChart, Trophy, Settings as SettingsIcon, Activity,
 } from "lucide-react";
 import Mascot from "./Mascot";
 
@@ -46,6 +46,7 @@ export default function Sidebar({ open, onClose, profile }) {
       </div>
 
       <nav className="px-2 pt-4 flex flex-col gap-0.5">
+        <NavItem icon={Activity} label="Active" to="/active" active={isActive("/active")} onClick={onClose} />
         <NavItem icon={FileText} label="Drafts" to="/drafts" active={isActive("/drafts")} onClick={onClose} />
         <NavItem icon={MessageSquare} label="Chats" to="/chats" active={isActive("/chats")} onClick={onClose} />
       </nav>
