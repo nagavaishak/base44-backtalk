@@ -81,10 +81,265 @@ export const MORE_EXAMPLES = [
   "Defense spending stays elevated for a decade",
 ];
 
+// ---------- Supertake seed (demo data) ----------
+const ROCKET_ID = "tk_rocket";
+const STABLE_ID = "tk_stable";
+const DRAFT_ID = "tk_draft_nuclear";
+const SEED_FLAG_KEY = "supertake.seeded";
+
+const ROCKET_IDEA = "A bet that launch cadence keeps climbing from here, expressed through the supply chain rather than the launchers themselves. Suppliers of engines, propulsion components, specialty metals, structures, avionics and test gear get paid whether SpaceX, Rocket Lab, Blue Origin or anyone else wins share, so rising launch volume lifts the whole basket without picking a winner. The posture is structural: this plays out over years as launch rates compound, so the basket is broad across four layers with a couple of large, steady aerospace names as ballast and a modest cash reserve.";
+
+const ROCKET_PLAYBOOK = [
+  "Rebalances with spare cash when a position drifts more than 5% from its planned size.",
+  "Looks closer when any single position moves more than 5% in a day.",
+  "Flags the whole take if it moves more than 3% in a day.",
+  "Trims any position that grows past 25% of the take.",
+  "This is a years-long bet on launch volume, so hold through price swings and act only when the supply chain story itself changes.",
+  "Judge each supplier by whether launch and space orders keep showing up in its backlog, not by how its stock moved this week.",
+  "Bad news at one launcher, SpaceX, Rocket Lab or Blue Origin, doesn't break the take; the basket is built so suppliers get paid whoever wins.",
+  "Keep the four layers represented: propulsion, structures and materials, avionics and test gear, and the two ballast holdings. Don't let gains concentrate the take into one layer.",
+  "If HON or PH stops acting as ballast and starts driving the swings, flag it rather than trading around it.",
+  "Trim anything past 25% of the take and put the proceeds back across the layer that's lagged.",
+];
+
+const ROCKET_BUCKETS = [
+  { name: "Avionics and test gear", color: "#8B5CF6", tickers: ["TDG", "HEI", "TDY", "CW", "ATRO", "MRCY"], weight: 30.7 },
+  { name: "Structures and materials", color: "#3B82F6", tickers: ["KRMN", "HWM", "LHX", "TXT"], weight: 29.6 },
+  { name: "Propulsion", color: "#EF4444", tickers: ["RKLB", "SPCE", "ASTS", "MAXR", "IRDM"], weight: 19.7 },
+  { name: "Ballast", color: "#10B981", tickers: ["HON", "PH"], weight: 10.0 },
+];
+
+const STABLE_BUCKETS = [
+  { name: "Issuers", color: "#8B5CF6", tickers: ["CRCL"], weight: 18.0 },
+  { name: "Exchanges and wallets", color: "#3B82F6", tickers: ["COIN", "HOOD"], weight: 16.0 },
+  { name: "Card networks", color: "#EF4444", tickers: ["V", "MA"], weight: 16.0 },
+  { name: "Banks and issuers", color: "#F59E0B", tickers: ["JPM", "BAC", "SQ"], weight: 14.0 },
+  { name: "Payments fintech", color: "#10B981", tickers: ["PYPL", "MELI", "DLO", "NU"], weight: 14.0 },
+  { name: "Broad market", color: "#6B7280", tickers: ["SPY", "QQQ"], weight: 12.0 },
+];
+
+function scaleSeries(arr, target) {
+  const last = arr[arr.length - 1];
+  if (!last) return arr.map(() => Number((target * 0.5).toFixed(2)));
+  const k = target / last;
+  return arr.map((v) => Number((v * k).toFixed(2)));
+}
+
+function seedTakeRocket() {
+  const chart = buildChartData(ROCKET_ID);
+  chart["5Y"] = {
+    values: scaleSeries(chart["5Y"].values, 58.44),
+    benchmark: scaleSeries(chart["5Y"].benchmark, 27.04),
+    labels: chart["5Y"].labels,
+  };
+  const positions = ROCKET_BUCKETS.flatMap((b) => b.tickers).map((ticker) => ({ ticker }));
+  return {
+    id: ROCKET_ID,
+    title: "Rocket Supply Chain",
+    belief: "Space tech is just gonna increase from here on and everything related to space technology",
+    summary: ROCKET_IDEA,
+    funded: true,
+    value: 100.0,
+    todayChange: 0.0,
+    return1y: 58.44,
+    beat: 31.4,
+    onTrack: true,
+    statusLabel: "Opens at the bell",
+    statusTone: "neutral",
+    positions,
+    buckets: ROCKET_BUCKETS,
+    cash: 10,
+    plan: {
+      idea: ROCKET_IDEA,
+      quote: "Space tech is just goona increase from here on and everything related to space technology",
+      quoteBy: "You, when this started",
+      playbook: ROCKET_PLAYBOOK,
+      whenSellsOut: "A position is sold only if the whole take breaks: launch cadence stops climbing and the supply chain stops getting paid for growth. Otherwise the user removes a holding from the take's page.",
+      whenTrims: "Trim any holding that grows past 25% of the take through gains alone.",
+      whenAdds: "Add on weakness when a supplier drops more than 15% while its order book and the launch-cadence story are still intact.",
+    },
+    rules: { entry: "Buy the basket at the next market open, spread across the four layers.", exit: "Trim any position past 25%, or if the launch-cadence story breaks.", rebalance: "Rebalance quarterly, or when a layer drifts more than 5% from target." },
+    chart,
+    defaultPeriod: "5Y",
+    activity: [
+      { time: "Oct 5", tone: "green", icon: "up", text: "Autopilot ON for \u201CRocket Supply Chain\u201D, Supertake now trades within your guardrails without asking." },
+      { time: "Oct 5", tone: "green", icon: "public", text: "\u201CRocket Supply Chain\u201D is public now. Anyone with the link can see it: supertake.com/t/HqqK7jkg7Fw. Percent-only, never dollars. Unpublish anytime from Sharing." },
+      { time: "Oct 5", tone: "green", icon: "up", text: "Activated \u201CRocket Supply Chain\u201D with $100.00. Practice money." },
+      { time: "Oct 5", tone: "green", icon: "up", text: "Created \u201CRocket Supply Chain\u201D. Draft." },
+    ],
+    public: true,
+    createdDate: Date.now() - 2 * 86400000,
+  };
+}
+
+function seedTakeStable() {
+  const chart = buildChartData(STABLE_ID);
+  const positions = STABLE_BUCKETS.flatMap((b) => b.tickers).map((ticker) => ({ ticker }));
+  return {
+    id: STABLE_ID,
+    title: "Stablecoin Full Stack",
+    belief: "Stablecoins become the rails for global payments",
+    summary: "A bet that stablecoins become the default rails for moving dollars online, expressed across the issuers, networks and banks that carry them.",
+    funded: true,
+    value: 100.83,
+    todayChange: 2.84,
+    return1y: -0.2,
+    beat: 0,
+    onTrack: false,
+    statusLabel: "Watching closely",
+    statusTone: "amber",
+    positions,
+    buckets: STABLE_BUCKETS,
+    cash: 10,
+    plan: {
+      idea: "A bet that stablecoins become the default rails for moving dollars online, expressed across the issuers, networks and banks that carry them.",
+      quote: "Stablecoins are just a faster ACH.",
+      quoteBy: "You, when this started",
+      playbook: [
+        "Rebalance quarterly, or when a layer drifts more than 5% from target.",
+        "Trim any position past 25% of the take.",
+        "Flag the take if Circle specifically loses a key banking partner.",
+      ],
+      whenSellsOut: "Sell only if stablecoin regulation collapses the issuer economics, not on price.",
+      whenTrims: "Trim any holding that grows past 25% of the take through gains alone.",
+      whenAdds: "Add on weakness when a name drops more than 15% while adoption keeps climbing.",
+    },
+    rules: { entry: "Buy the basket at the next market open.", exit: "Trim past 25%.", rebalance: "Rebalance quarterly." },
+    chart,
+    defaultPeriod: "1M",
+    activity: [
+      { time: "Oct 5", tone: "tan", icon: "watch", text: "\u201CStablecoin Full Stack\u201D moved to watching closely. Everything moved in your favor today, but a billion-dollar coalition just launched a rival stablecoin aimed straight at Circle, which is your biggest single bet." },
+      { time: "Oct 5", tone: "tan", icon: "watch", text: "Watch list updated: +Open USD (OUSD). The weekly review keeps the news watch aligned with what the take depends on. Now watching: Tether, USDC, PYUSD, Global Dollar (USDG), GENIUS Act stablecoin regulation, SEC, Paxos, Open USD (OUSD)." },
+      { time: "Oct 5", tone: "tan", icon: "up", text: "Bought 14 positions \u00B7 $90.03 total. Stablecoin Full Stack." },
+    ],
+    public: true,
+    createdDate: Date.now() - 2 * 86400000,
+  };
+}
+
+function seedTakeDraft() {
+  const chart = buildChartData(DRAFT_ID);
+  const positions = ["CCJ", "URA", "XLE", "XOM", "JPM", "GS", "BAC", "WFC", "TLT", "VTI"].map((ticker) => ({ ticker }));
+  return {
+    id: DRAFT_ID,
+    title: "Nuclear Baseload",
+    belief: "Nuclear answers baseload demand",
+    summary: "A bet that nuclear returns as baseload for AI and grid demand, expressed through uranium miners, producers and the banks that finance builds.",
+    funded: false,
+    value: 0,
+    todayChange: 0,
+    return1y: 0,
+    beat: 0,
+    onTrack: true,
+    statusLabel: "Draft",
+    statusTone: "neutral",
+    positions,
+    buckets: [
+      { name: "Uranium miners", color: "#8B5CF6", tickers: ["CCJ", "URA"], weight: 30 },
+      { name: "Energy producers", color: "#3B82F6", tickers: ["XLE", "XOM"], weight: 25 },
+      { name: "Project financiers", color: "#EF4444", tickers: ["JPM", "GS", "BAC", "WFC"], weight: 25 },
+      { name: "Bond hedge", color: "#10B981", tickers: ["TLT", "VTI"], weight: 10 },
+    ],
+    cash: 10,
+    plan: {
+      idea: "A bet that nuclear returns as baseload for AI and grid demand, expressed through uranium miners, producers and the banks that finance builds.",
+      quote: "Nuclear answers baseload demand",
+      quoteBy: "You, when this started",
+      playbook: [
+        "Rebalance quarterly, or when a layer drifts more than 5% from target.",
+        "Trim any position past 25% of the take.",
+        "Hold through permit delays; act only if the baseload story itself changes.",
+      ],
+      whenSellsOut: "Sell only if the baseload thesis breaks, not on price.",
+      whenTrims: "Trim any holding past 25% of the take through gains alone.",
+      whenAdds: "Add on weakness when a miner drops more than 15% while order books stay intact.",
+    },
+    rules: { entry: "Buy the basket at the next market open.", exit: "Trim past 25%.", rebalance: "Rebalance quarterly." },
+    chart,
+    defaultPeriod: "1Y",
+    activity: [
+      { time: "Oct 6", tone: "green", icon: "up", text: "Saved as an unfunded draft." },
+      { time: "Oct 6", tone: "green", icon: "up", text: "Created \u201CNuclear Baseload\u201D." },
+    ],
+    public: false,
+    createdDate: Date.now() - 1 * 86400000,
+  };
+}
+
+export const SEED_LEADERBOARD = [
+  { id: "lb_1", title: "Discovery Economy Toolmakers", author: "Matt", mode: "Practice", publicFor: "24 days", ret: 26.7, forks: 36, icon: "bag" },
+  { id: "lb_2", title: "AI Cyber Defense Consolidation", author: "Michael Mignano", mode: "Real", publicFor: "35 days", ret: 16.7, forks: 10, icon: "door" },
+  { id: "lb_3", title: "Watts and Wafers", author: "Anish", mode: "Practice", publicFor: "21 days", ret: 11.9, forks: 4, icon: "sun" },
+  { id: "lb_4", title: "Rebel Alliance, No Crypto", author: "Faraz Fatemi", mode: "Practice", publicFor: "26 days", ret: 11.4, icon: "grid" },
+  { id: "lb_5", title: "Identity Is the New Perimeter", author: "Michael Mignano", mode: "Real", publicFor: "34 days", ret: 11.3, icon: "fingerprint" },
+  { id: "lb_6", title: "Medicine 2045", author: "Fred Wilson", mode: "Real", publicFor: "33 days", ret: 11.3, forks: 11, icon: "stethoscope" },
+  { id: "lb_7", title: "Medicine 2045", author: "Michael Mignano", mode: "Real", publicFor: "33 days", ret: 11.0, forks: 3, icon: "stethoscope" },
+  { id: "lb_8", title: "Onshoring Silicon", author: "Anish", mode: "Practice", publicFor: "18 days", ret: 9.8, icon: "chip" },
+  { id: "lb_9", title: "Grid Hardening", author: "Lena Ortiz", mode: "Real", publicFor: "29 days", ret: 8.6, icon: "bolt" },
+  { id: "lb_10", title: "Protein Frontier", author: "Priya Rao", mode: "Practice", publicFor: "22 days", ret: 7.9, icon: "flask" },
+];
+
+export const SEED_CHATS = [
+  { id: "ch_1", title: "Rocket Supply Chain", preview: "Space tech is just goona increase from\u2026" },
+  { id: "ch_2", title: "Stablecoin Full Stack", preview: "Why did you trim Circle today?" },
+  { id: "ch_3", title: "Nuclear Baseload", preview: "Is uranium too crowded here?" },
+];
+
+export const SEED_FEED = [
+  { id: "f_1", author: "Albert Sebastian", avatar: "AS", action: "published", title: "Robotaxi Majority Bet", tickers: ["UBER", "TSLA", "GOOGL"], more: 16, status: "Opens at the bell", time: "27m" },
+  { id: "f_2", author: "Leandro", avatar: "LE", action: "published their first take", title: "Longer Lives, Powered by AI", tickers: ["LLY", "NVDA", "TMO"], more: 14, status: "Opens at the bell", time: "2h" },
+];
+
+export const SEED_ACTIVITY = [
+  ...seedTakeRocket().activity,
+  ...seedTakeStable().activity,
+];
+
+export function getActivity() {
+  return SEED_ACTIVITY;
+}
+export function getChats() {
+  return SEED_CHATS;
+}
+export function getFollowFeed() {
+  return SEED_FEED;
+}
+
+export function getPracticeSummary() {
+  const funded = getTakes().filter((t) => t.funded);
+  const value = funded.reduce((s, t) => s + (t.value || 0), 0);
+  const todayChange = funded.reduce((s, t) => s + (t.todayChange || 0), 0);
+  return { value, todayChange };
+}
+
+export function simpleBuckets(positions) {
+  return [{ name: "Holdings", color: "#1F6F4A", tickers: positions.map((p) => p.ticker), weight: 100 }];
+}
+
+export function planFromRules(belief, summary, rules) {
+  return {
+    idea: summary || belief,
+    quote: belief,
+    quoteBy: "You, when this started",
+    playbook: [rules.entry, rules.exit, rules.rebalance].filter(Boolean),
+    whenSellsOut: rules.exit || "",
+    whenTrims: "Trim any holding that grows past 25% of the take through gains alone.",
+    whenAdds: "Add on weakness when a name drops more than 15% while the thesis is intact.",
+  };
+}
+
+function ensureSeed() {
+  if (read(SEED_FLAG_KEY, false)) return;
+  write(SEED_FLAG_KEY, true);
+  saveTakes([seedTakeRocket(), seedTakeStable(), seedTakeDraft()]);
+}
+
 const DEFAULT_PROFILE = {
-  displayName: "Sam Avery",
-  handle: "sam",
-  avatar: "SA",
+  displayName: "Nags",
+  handle: "nagavaishak",
+  avatar: "N",
+  bio: "Betting on supply chains, not stock pickers.",
+  following: 1,
 };
 
 // ---------- persistence helpers ----------
@@ -120,6 +375,7 @@ export function saveSidebarOpen(open) {
 }
 
 export function getTakes() {
+  ensureSeed();
   return read(TAKES_KEY, []);
 }
 export function saveTakes(takes) {
@@ -259,6 +515,10 @@ export function buildTake(belief, answers, options = {}) {
     rules: strategyRules(belief, answers),
     createdDate: Date.now(),
     activity: defaultActivity(title, funded),
+    buckets: simpleBuckets(positions),
+    plan: planFromRules(belief, summary, strategyRules(belief, answers)),
+    statusLabel: onTrack ? "On track" : "Watching closely",
+    statusTone: onTrack ? "green" : "amber",
     public: true,
   };
 }
@@ -545,10 +805,7 @@ export function strategyRules(belief, answers = {}) {
 
 // leaderboard: public takes, ranked by return
 export function getLeaderboard() {
-  const mine = getTakes();
-  const demo = seedLeaderboard();
-  const all = [...mine, ...demo].sort((a, b) => b.return1y - a.return1y);
-  return all;
+  return [...SEED_LEADERBOARD].sort((a, b) => b.ret - a.ret);
 }
 
 function seedLeaderboard() {

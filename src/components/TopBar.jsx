@@ -1,22 +1,36 @@
 import React from "react";
-import { Menu } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
+import { getPracticeSummary } from "@/lib/store";
 
-export default function TopBar({ onToggleSidebar, profile }) {
+export default function TopBar({ onToggleSidebar, onOpenActivity }) {
+  const s = getPracticeSummary();
+  const up = s.todayChange >= 0;
+
   return (
-    <header className="bt-hairline-strong bt-cream bg-[#F4F4EF] flex items-center justify-between px-3 sm:px-4" style={{ height: 46 }}>
+    <header
+      className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 bg-cream/90 backdrop-blur-sm border-b border-line"
+      style={{ height: 52 }}
+    >
       <button
         onClick={onToggleSidebar}
-        className="flex items-center justify-center w-8 h-8 -ml-1 rounded-full hover:bg-black/5 transition-colors"
+        className="md:hidden flex items-center justify-center w-8 h-8 -ml-1 rounded-full hover:bg-ink/5 transition-colors"
         aria-label="Toggle sidebar"
       >
-        <Menu size={18} strokeWidth={2} className="bt-ink" />
+        <Menu size={18} className="text-ink" />
       </button>
-      <span className="font-heading font-medium text-[17px] bt-track-tight bt-ink select-none">backtalk.</span>
-      <div className="flex items-center gap-2 text-[12px]">
-        <span className="bt-ink/55">Practice</span>
-        <span className="bt-ink font-semibold">$100.00</span>
-        <span className="bt-ink/45 hidden sm:inline">·</span>
-        <span className="bt-pos hidden sm:inline font-medium">$0.00 today</span>
+      <div className="flex items-center gap-3 text-[12.5px]">
+        <span className="text-muted">Practice</span>
+        <span className="text-ink font-semibold tabular-nums">${s.value.toFixed(2)}</span>
+        <span className={`hidden sm:inline font-medium tabular-nums ${up ? "text-stgreen" : "text-loss"}`}>
+          {up ? "▲" : "▼"} ${Math.abs(s.todayChange).toFixed(2)} today
+        </span>
+        <button
+          onClick={onOpenActivity}
+          className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-ink/5 transition-colors"
+          aria-label="Activity"
+        >
+          <Bell size={16} className="text-ink" />
+        </button>
       </div>
     </header>
   );

@@ -1,61 +1,83 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { PERIOD_KEYS } from "@/lib/store";
 
-const Y_TICKS = [14, 12, 7, 2, -3];
+function niceTicks(min, max, count = 5) {
+  const range = (max - min) || 1;
+  const step0 = range / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const norm = step0 / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const start = Math.floor(min / step) * step;
+  const ticks = [];
+  for (let v = start; v <= max + 0.5 * step; v += step) ticks.push(Number(v.toFixed(2)));
+  return ticks;
+}
 
-export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, showEntry }) {
+export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket }) {
   const data = take.chart[period];
   const values = data.values;
   const benchmark = data.benchmark;
   const labels = data.labels;
   const containerRef = useRef(null);
+  const lineRef = useRef(null);
   const [width, setWidth] = useState(640);
-  const [hover, setHover] = useState(null); // {x, y, i}
+  const [hover, setHover] = useState(null);
+  const [pathLen, setPathLen] = useState(null);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      setWidth(entries[0].contentRect.width);
-    });
+    const ro = new ResizeObserver((entries) => setWidth(entries[0].contentRect.width));
     ro.observe(el);
     setWidth(el.getBoundingClientRect().width);
     return () => ro.disconnect();
   }, []);
 
-  const padL = 44;
-  const padR = 14;
-  const padT = 16;
-  const padB = 26;
-  const h = 220;
+  const padL = 44, padR = 14, padT = 16, padB = 28;
+  const h = 240;
   const plotW = Math.max(10, width - padL - padR);
   const plotH = h - padT - padB;
 
-  const yMin = -3;
-  const yMax = 14;
-  const yToPx = (v) => padT + ((yMax - v) / (yMax - yMin)) * plotH;
+  const all = [...values, ...benchmark];
+  const rawMin = Math.min(...all);
+  const rawMax = Math.max(...all);
+  const ticks = useMemo(() => niceTicks(rawMin, rawMax, 5), [rawMin, rawMax]);
+  const yMin = ticks[0];
+  const yMax = ticks[ticks.length - 1];
+  const yToPx = (v) => padT + ((yMax - v) / (yMax - yMin || 1)) * plotH;
   const xToPx = (i) => padL + (values.length <= 1 ? 0 : (i / (values.length - 1)) * plotW);
 
   const linePath = useMemo(
     () => values.map((v, i) => `${i === 0 ? "M" : "L"}${xToPx(i).toFixed(1)},${yToPx(v).toFixed(1)}`).join(" "),
-    [values, width]
+    [values, width, yMin, yMax]
   );
   const benchPath = useMemo(
     () => benchmark.map((v, i) => `${i === 0 ? "M" : "L"}${xToPx(i).toFixed(1)},${yToPx(v).toFixed(1)}`).join(" "),
-    [benchmark, width]
+    [benchmark, width, yMin, yMax]
   );
   const areaPath = useMemo(() => {
     const top = values.map((v, i) => `${i === 0 ? "M" : "L"}${xToPx(i).toFixed(1)},${yToPx(v).toFixed(1)}`).join(" ");
     return `${top} L${xToPx(values.length - 1).toFixed(1)},${yToPx(yMin).toFixed(1)} L${xToPx(0).toFixed(1)},${yToPx(yMin).toFixed(1)} Z`;
-  }, [values, width]);
+  }, [values, width, yMin, yMax]);
+
+  // draw-in animation
+  useEffect(() => {
+    setPathLen(null);
+    const id = requestAnimationFrame(() => {
+      if (lineRef.current && typeof lineRef.current.getTotalLength === "function") {
+        setPathLen(lineRef.current.getTotalLength());
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [linePath]);
 
   const last = values[values.length - 1];
   const benchLast = benchmark[benchmark.length - 1];
   const isNeg = last < 0;
-  const lineColor = isNeg ? "#D14343" : "#0E8A4B";
+  const lineColor = isNeg ? "#B3412E" : "#22C55E";
   const gradId = "btGrad" + (isNeg ? "Neg" : "Pos");
-  const gradStop = isNeg ? "rgba(209,67,67,0.16)" : "rgba(14,138,75,0.16)";
-  const gradStop0 = isNeg ? "rgba(209,67,67,0.04)" : "rgba(14,138,75,0.04)";
+  const gradStop = isNeg ? "rgba(179,65,46,0.14)" : "rgba(34,197,94,0.14)";
+  const gradStop0 = isNeg ? "rgba(179,65,46,0.02)" : "rgba(34,197,94,0.02)";
   const beat = Number((last - benchLast).toFixed(2));
 
   const onMove = (e) => {
@@ -66,25 +88,24 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, sh
     setHover({ x: xToPx(ci), y: yToPx(values[ci]), i: ci });
   };
   const onLeave = () => setHover(null);
-
   const fmtPct = (v) => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
 
   return (
     <div>
-      <div className="flex items-end justify-between gap-3 mb-3">
+      <div className="flex items-end justify-between gap-3 mb-4">
         <div>
-          <div className={`text-[28px] font-heading font-medium bt-track-tighter ${isNeg ? "bt-neg" : "bt-pos"}`}>
+          <div className={`font-heading text-[30px] font-medium bt-track-tighter tabular-nums ${isNeg ? "text-loss" : "text-stgreen"}`}>
             {fmtPct(last)}
           </div>
-          {!vsMarket && (
-            <span
-              className={`inline-block mt-1 px-2.5 py-1 rounded-full text-[12px] font-medium ${
-                beat >= 0 ? "bt-bg-pos text-white" : "bt-bg-neg text-white"
-              }`}
-            >
-              {beat >= 0 ? "beating" : "trailing"} the market by {Math.abs(beat).toFixed(1)} points
-            </span>
-          )}
+          <span
+            className="inline-block mt-1.5 px-2.5 h-6 leading-6 rounded-full text-[12px] font-medium"
+            style={{
+              color: beat >= 0 ? "#1F6F4A" : "#B3412E",
+              background: beat >= 0 ? "#E8F5E9" : "#FBE9E7",
+            }}
+          >
+            {beat >= 0 ? "beating" : "trailing"} the market by {Math.abs(beat).toFixed(1)} points
+          </span>
         </div>
       </div>
 
@@ -109,75 +130,45 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, sh
             </linearGradient>
           </defs>
 
-          {/* y grid + ticks */}
-          {Y_TICKS.map((t) => (
+          {ticks.map((t) => (
             <g key={t}>
-              <line x1={padL} y1={yToPx(t)} x2={width - padR} y2={yToPx(t)} stroke="rgba(10,10,10,0.06)" strokeWidth={1} />
-              <text x={padL - 8} y={yToPx(t) + 3} textAnchor="end" fontSize={10} fill="rgba(10,10,10,0.4)">
+              <line x1={padL} y1={yToPx(t)} x2={width - padR} y2={yToPx(t)} stroke="#E8E4DA" strokeWidth={1} />
+              <text x={padL - 8} y={yToPx(t) + 3} textAnchor="end" fontSize={10} fill="#7A766B">
                 {t >= 0 ? "+" : ""}
                 {t}%
               </text>
             </g>
           ))}
 
-          {/* area fill */}
           <path d={areaPath} fill={`url(#${gradId})`} />
 
-          {/* benchmark dashed */}
-          <path d={benchPath} fill="none" stroke="rgba(10,10,10,0.28)" strokeWidth={1} strokeDasharray="3 3" />
+          <path d={benchPath} fill="none" stroke="rgba(26,26,23,0.3)" strokeWidth={1} strokeDasharray="3 3" />
 
-          {/* main line */}
-          <path d={linePath} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          <path
+            ref={lineRef}
+            d={linePath}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            className={pathLen ? "bt-draw" : ""}
+            style={pathLen ? { "--bt-len": pathLen } : undefined}
+          />
 
-          {/* hover dot + vertical */}
           {hover && (
             <g>
-              <line x1={hover.x} y1={padT} x2={hover.x} y2={padT + plotH} stroke="rgba(10,10,10,0.12)" strokeWidth={1} />
+              <line x1={hover.x} y1={padT} x2={hover.x} y2={padT + plotH} stroke="rgba(26,26,23,0.12)" strokeWidth={1} />
               <circle cx={hover.x} cy={hover.y} r={3.5} fill={lineColor} stroke="#fff" strokeWidth={1.5} />
             </g>
           )}
 
-          {/* entry point marker */}
-          {showEntry && (
-            <g>
-              <line
-                x1={xToPx(values.length - 1)}
-                y1={padT}
-                x2={xToPx(values.length - 1)}
-                y2={padT + plotH}
-                stroke={lineColor}
-                strokeWidth={1}
-                strokeDasharray="3 3"
-                opacity={0.45}
-              />
-              <circle
-                cx={xToPx(values.length - 1)}
-                cy={yToPx(values[values.length - 1])}
-                r={4}
-                fill={lineColor}
-                stroke="#fff"
-                strokeWidth={1.5}
-              />
-              <text
-                x={Math.max(xToPx(values.length - 1) - 6, padL + 14)}
-                y={yToPx(values[values.length - 1]) - 9}
-                textAnchor="end"
-                fontSize={10}
-                fontWeight={600}
-                fill={lineColor}
-              >
-                Entry
-              </text>
-            </g>
-          )}
-
-          {/* x labels (sparse) */}
           {labels.map((d, i) => {
-            const step = Math.ceil(labels.length / 5);
+            const step = Math.ceil(labels.length / 6);
             if (i % step !== 0 && i !== labels.length - 1) return null;
             return (
-              <text key={i} x={xToPx(i)} y={h - 6} textAnchor="middle" fontSize={10} fill="rgba(10,10,10,0.4)">
-                {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              <text key={i} x={xToPx(i)} y={h - 8} textAnchor="middle" fontSize={10} fill="#7A766B">
+                {new Date(d).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}
               </text>
             );
           })}
@@ -187,7 +178,7 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, sh
           <div
             className="pointer-events-none absolute z-10 px-2.5 py-1.5 rounded-lg text-[11px] text-white"
             style={{
-              background: "#0A0A0A",
+              background: "#1A1A17",
               left: Math.min(Math.max(hover.x - 40, 4), width - 88),
               top: Math.max(hover.y - 44, 4),
             }}
@@ -195,19 +186,18 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, sh
             <div className="opacity-60">
               {new Date(labels[hover.i]).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </div>
-            <div className="font-semibold">{fmtPct(values[hover.i])}</div>
+            <div className="font-semibold tabular-nums">{fmtPct(values[hover.i])}</div>
           </div>
         )}
       </div>
 
-      {/* period pills */}
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-1">
         {PERIOD_KEYS.map((p) => (
           <button
             key={p}
             onClick={() => onPeriod(p)}
-            className={`px-3 h-8 rounded-full text-[13px] transition-colors ${
-              period === p ? "bg-black/[0.07] bt-ink font-medium" : "bt-ink/55 hover:bg-black/[0.04]"
+            className={`px-2.5 h-8 rounded-full text-[13px] transition-colors ${
+              period === p ? "text-ink font-medium" : "text-muted hover:text-ink"
             }`}
           >
             {p}
@@ -215,8 +205,8 @@ export default function Chart({ take, period, onPeriod, vsMarket, onVsMarket, sh
         ))}
         <button
           onClick={onVsMarket}
-          className={`px-3 h-8 rounded-full text-[13px] transition-colors ${
-            vsMarket ? "bg-black/[0.07] bt-ink font-medium" : "bt-ink/55 hover:bg-black/[0.04]"
+          className={`ml-1 px-2.5 h-8 rounded-full text-[13px] transition-colors ${
+            vsMarket ? "text-ink font-medium" : "text-muted hover:text-ink"
           }`}
         >
           vs. the market

@@ -19,7 +19,7 @@ import SignIn from '@/pages/SignIn';
 import ForkTake from '@/pages/ForkTake';
 import DraftTake from '@/pages/DraftTake';
 import Drafts from '@/pages/Drafts';
-import Active from '@/pages/Active';
+import Profile from '@/pages/Profile';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -59,8 +59,8 @@ const AuthenticatedApp = () => {
         <Route path="/takes" element={<Takes />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/active" element={<Active />} />
         <Route path="/drafts" element={<Drafts />} />
+        <Route path="/u/:handle" element={<Profile />} />
         <Route path="/chats" element={<Empty title="Chats" note="Your conversations about a take will live here." />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

@@ -13,6 +13,14 @@ module.exports = {
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
+  			ink: 'rgb(var(--c-ink) / <alpha-value>)',
+  			cream: 'rgb(var(--c-cream) / <alpha-value>)',
+  			line: 'rgb(var(--c-line) / <alpha-value>)',
+  			muted: 'rgb(var(--c-muted) / <alpha-value>)',
+  			stgreen: 'rgb(var(--c-green) / <alpha-value>)',
+  			loss: 'rgb(var(--c-loss) / <alpha-value>)',
+  			chartgreen: 'rgb(var(--c-chartgreen) / <alpha-value>)',
+  			amber: 'rgb(var(--c-amber) / <alpha-value>)',
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'

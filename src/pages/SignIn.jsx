@@ -54,7 +54,7 @@ export default function SignIn() {
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-5">
       <div className="flex items-center gap-2 mb-8">
         <Mascot size={26} />
-        <span className="font-heading text-[20px] bt-track-tighter bt-ink">backtalk</span>
+        <span className="font-heading text-[20px] bt-track-tighter bt-ink">Supertake</span>
       </div>
 
       <div className="w-full max-w-[380px] p-7 rounded-[24px] bt-hairline bg-white">

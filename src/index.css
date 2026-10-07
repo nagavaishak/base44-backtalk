@@ -5,29 +5,39 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
+    --foreground: 38 16% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
+    --card-foreground: 38 16% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 152 73% 17%;
+    --popover-foreground: 38 16% 9%;
+    --primary: 152 56% 28%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 60 6% 95%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 60 6% 95%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 72% 51%;
+    --secondary: 40 12% 88%;
+    --secondary-foreground: 38 16% 9%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 38 7% 45%;
+    --accent: 40 20% 94%;
+    --accent-foreground: 38 16% 9%;
+    --destructive: 12 59% 44%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 152 73% 17%;
-    --radius: 1.25rem;
-    --font-heading: "Newsreader", ui-serif, Georgia, serif;
+    --border: 40 12% 88%;
+    --input: 40 12% 88%;
+    --ring: 152 56% 28%;
+    --radius: 1rem;
+    --font-heading: "Fraunces", ui-serif, Georgia, serif;
     --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
-    --font-display: "Newsreader", ui-serif, Georgia, serif;
+    --font-display: "Fraunces", ui-serif, Georgia, serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    /* Supertake palette (RGB channels for tailwind alpha) */
+    --c-ink: 26 26 23;
+    --c-cream: 250 248 243;
+    --c-line: 232 228 218;
+    --c-muted: 122 118 107;
+    --c-green: 31 111 74;
+    --c-loss: 179 65 46;
+    --c-chartgreen: 34 197 94;
+    --c-amber: 180 130 40;
   }
 }
 
@@ -37,46 +47,73 @@
   }
 
   body {
-    @apply bg-background text-foreground font-body antialiased;
-    font-feature-settings: "ss01", "cv01";
+    @apply text-foreground font-body antialiased;
+    background-color: #FAF8F3;
+    color: #1A1A17;
   }
 
   .font-heading, .font-display {
     font-family: var(--font-heading);
     font-optical-sizing: auto;
+    font-variation-settings: "opsz" 24, "SOFT" 50;
   }
 }
 
 @layer utilities {
-  .bt-ink { color: #0A0A0A; }
-  .bt-cream { background-color: #F4F4EF; }
-  .bt-cream-text { color: #F4F4EF; }
-  .bt-green { color: #0E4B32; }
-  .bt-bg-green { background-color: #0E4B32; }
-  .bt-disabled { background-color: #D9DAD4; }
-  .bt-hairline { border: 1px solid rgba(10,10,10,0.08); }
-  .bt-hairline-strong { border: 1px solid rgba(10,10,10,0.12); }
-  .bt-pos { color: #0E8A4B; }
-  .bt-bg-pos { background-color: #0E8A4B; }
-  .bt-neg { color: #D14343; }
-  .bt-bg-neg { background-color: #D14343; }
-  .bt-fill-pos { fill: #0E8A4B; }
-  .bt-fill-neg { fill: #D14343; }
+  .bt-ink { color: #1A1A17; }
+  .bt-cream { background-color: #FAF8F3; }
+  .bt-cream-text { color: #FAF8F3; }
+  .bt-green { color: #1F6F4A; }
+  .bt-bg-green { background-color: #1F6F4A; }
+  .bt-disabled { background-color: #E8E4DA; }
+  .bt-hairline { border: 1px solid #E8E4DA; }
+  .bt-hairline-strong { border: 1px solid #D8D3C7; }
+  .bt-pos { color: #1F6F4A; }
+  .bt-bg-pos { background-color: #1F6F4A; }
+  .bt-neg { color: #B3412E; }
+  .bt-bg-neg { background-color: #B3412E; }
+  .bt-fill-pos { fill: #22C55E; }
+  .bt-fill-neg { fill: #B3412E; }
+  .bt-amber { color: #B48228; }
+  .bt-bg-amber { background-color: #B48228; }
   .bt-track-tight { letter-spacing: -0.02em; }
   .bt-track-tighter { letter-spacing: -0.035em; }
-  .bt-slide { transition: transform 240ms ease-out, margin 240ms ease-out, opacity 240ms ease-out; }
-  .bt-fade { transition: opacity 240ms ease-out; }
+  .bt-caps { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; }
+  .bt-slide { transition: transform 220ms ease-out, margin 220ms ease-out, opacity 220ms ease-out; }
+  .bt-fade { transition: opacity 200ms ease-out; }
+  .bt-card { background-color: #FFFFFF; border: 1px solid #E8E4DA; border-radius: 16px; }
 }
+
+/* explicit muted-ink opacity classes (kept unlayered so they apply reliably) */
+.bt-ink\/30 { color: rgba(26,26,23,0.30); }
+.bt-ink\/35 { color: rgba(26,26,23,0.35); }
+.bt-ink\/40 { color: rgba(26,26,23,0.40); }
+.bt-ink\/45 { color: rgba(26,26,23,0.45); }
+.bt-ink\/50 { color: rgba(26,26,23,0.50); }
+.bt-ink\/55 { color: rgba(26,26,23,0.55); }
+.bt-ink\/60 { color: rgba(26,26,23,0.60); }
+.bt-ink\/65 { color: rgba(26,26,23,0.65); }
+.bt-ink\/70 { color: rgba(26,26,23,0.70); }
+.bt-ink\/75 { color: rgba(26,26,23,0.75); }
+.bt-ink\/80 { color: rgba(26,26,23,0.80); }
+
+@keyframes btShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.bt-skel {
+  background: linear-gradient(90deg, #EFECE3 25%, #F6F3EB 37%, #EFECE3 63%);
+  background-size: 200% 100%;
+  animation: btShimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes btDraw { from { stroke-dashoffset: var(--bt-len, 1000); } to { stroke-dashoffset: 0; } }
+.bt-draw { stroke-dasharray: var(--bt-len, 1000); animation: btDraw 900ms ease-out forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .bt-skel { animation: none; background: #EFECE3; }
+  .bt-draw { animation: none; stroke-dasharray: none; }
 }
 
-/* thin scrollbar for the app */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(10,10,10,0.12); border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: rgba(26,26,23,0.14); border-radius: 999px; }
 ::-webkit-scrollbar-track { background: transparent; }
